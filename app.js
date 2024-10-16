@@ -36,6 +36,15 @@ imageUpload.addEventListener('change', function(event) {
     img.src = URL.createObjectURL(file);
 });
 
+// Keep automatic processing on palette changes
+colorInputs.forEach(input => {
+    input.addEventListener('input', function() {
+        if (imgLoaded) {
+            processImage();
+        }
+    });
+});
+
 function processImage() {
     const paletteHex = colorInputs.slice(0, 5).map(input => input.value);
     const palette = paletteHex.map(hexToRgb);
