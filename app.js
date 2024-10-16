@@ -30,11 +30,19 @@ imageUpload.addEventListener('change', function(event) {
     img.onload = function() {
         imgLoaded = true;
 
-        // Display the original image
         const oCtx = originalCanvas.getContext('2d');
-        originalCanvas.width = img.width;
-        originalCanvas.height = img.height;
-        oCtx.drawImage(img, 0, 0);
+
+        // Adjust canvas size based on the container width
+        const maxWidth = originalCanvas.parentElement.clientWidth;
+        const scaleFactor = maxWidth / img.width;
+        const newWidth = img.width * scaleFactor;
+        const newHeight = img.height * scaleFactor;
+
+        originalCanvas.width = newWidth;
+        originalCanvas.height = newHeight;
+
+        // Display the original image
+        oCtx.drawImage(img, 0, 0, newWidth, newHeight);
 
         // Automatically process the image after loading
         processImage();
@@ -77,11 +85,13 @@ function processImage() {
     // Process and display the transformed image
     const oCtx = originalCanvas.getContext('2d');
     const pCtx = processedCanvas.getContext('2d');
-    processedCanvas.width = img.width;
-    processedCanvas.height = img.height;
+
+    // Match the processed canvas size to the original canvas
+    processedCanvas.width = originalCanvas.width;
+    processedCanvas.height = originalCanvas.height;
 
     // Get image data
-    const imageData = oCtx.getImageData(0, 0, img.width, img.height);
+    const imageData = oCtx.getImageData(0, 0, originalCanvas.width, originalCanvas.height);
     const data = imageData.data;
 
     // Process each pixel
