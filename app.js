@@ -9,6 +9,13 @@ const colorInputs = [
     document.getElementById('color4'),
     document.getElementById('color5'),
 ];
+const checkboxes = [
+    document.getElementById('checkbox1'),
+    document.getElementById('checkbox2'),
+    document.getElementById('checkbox3'),
+    document.getElementById('checkbox4'),
+    document.getElementById('checkbox5'),
+];
 
 let img = new Image();
 let imgLoaded = false;
@@ -45,9 +52,27 @@ colorInputs.forEach(input => {
     });
 });
 
+checkboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        if (imgLoaded) {
+            processImage();
+        }
+    });
+});
+
 function processImage() {
-    const paletteHex = colorInputs.slice(0, 5).map(input => input.value);
-    const palette = paletteHex.map(hexToRgb);
+    // Get the selected colors based on the checkboxes
+    const selectedColors = [];
+    for (let i = 0; i < colorInputs.length; i++) {
+        if (checkboxes[i].checked) {
+            selectedColors.push(hexToRgb(colorInputs[i].value));
+        }
+    }
+    // If no colors are selected, alert the user and exit the function
+    if (selectedColors.length === 0) {
+        alert('Please select at least one color.');
+        return;
+    }
 
     // Process and display the transformed image
     const oCtx = originalCanvas.getContext('2d');
@@ -68,14 +93,14 @@ function processImage() {
         };
 
         // Find the closest color in the palette
-        let closestColor = palette[0];
-        let minDistance = colorDistance(pixelColor, palette[0]);
+        let closestColor = selectedColors[0];
+        let minDistance = colorDistance(pixelColor, selectedColors[0]);
 
-        for (let j = 1; j < palette.length; j++) {
-            const dist = colorDistance(pixelColor, palette[j]);
+        for (let j = 1; j < selectedColors.length; j++) {
+            const dist = colorDistance(pixelColor, selectedColors[j]);
             if (dist < minDistance) {
                 minDistance = dist;
-                closestColor = palette[j];
+                closestColor = selectedColors[j];
             }
         }
 
