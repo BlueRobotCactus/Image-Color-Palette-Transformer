@@ -7,3 +7,14 @@ body {
 h1 {
     margin-bottom: 20px;
 }
+
+#palette-selection {
+    margin: 20px 0;
+}
+
+.color-inputs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
