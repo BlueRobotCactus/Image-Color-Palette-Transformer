@@ -28,14 +28,6 @@ h1 {
     width: 80px;
 }
 
-.color-item div {
-    margin-top: 5px;
-}
-
-.color-item label {
-    margin-left: 5px;
-}
-
 .canvas-container {
     display: flex;
     flex-wrap: wrap;
@@ -60,30 +52,21 @@ canvas {
     height: auto;
 }
 
-/* Media Queries for Smaller Screens */
+#download-btn {
+    margin-top: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* Media Queries */
 @media (max-width: 768px) {
     .canvas-container {
         flex-direction: column;
     }
-    .canvas-container div {
-        width: 100%;
-        max-width: none;
-    }
-    .color-item {
-        width: 60px;
-    }
 }
 
 @media (max-width: 480px) {
-    h1 {
-        font-size: 24px;
-    }
-    .color-item {
-        width: 50px;
-    }
-    .color-item label {
-        font-size: 12px;
-    }
     body {
         padding: 10px;
     }

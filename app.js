@@ -1,7 +1,5 @@
 // Get references to the DOM elements
 const imageUpload = document.getElementById('image-upload');
-const originalCanvas = document.getElementById('original-canvas');
-const processedCanvas = document.getElementById('processed-canvas');
 const colorInputs = [
     document.getElementById('color1'),
     document.getElementById('color2'),
@@ -16,9 +14,13 @@ const checkboxes = [
     document.getElementById('checkbox4'),
     document.getElementById('checkbox5'),
 ];
+const originalCanvas = document.getElementById('original-canvas');
+const processedCanvas = document.getElementById('processed-canvas');
+const downloadBtn = document.getElementById('download-btn');
 
 let img = new Image();
 let imgLoaded = false;
+let processedImageDataURL = ''; // Store the full-size processed image data
 
 // Event listener for image upload
 imageUpload.addEventListener('change', function(event) {
@@ -30,102 +32,121 @@ imageUpload.addEventListener('change', function(event) {
     img.onload = function() {
         imgLoaded = true;
 
+        // Set canvas dimensions to match the original image for full-resolution processing
         const oCtx = originalCanvas.getContext('2d');
+        originalCanvas.width = img.width;
+        originalCanvas.height = img.height;
+        oCtx.drawImage(img, 0, 0);
 
-        // Adjust canvas size based on the container width
-        const maxWidth = originalCanvas.parentElement.clientWidth;
-        const scaleFactor = maxWidth / img.width;
-        const newWidth = img.width * scaleFactor;
-        const newHeight = img.height * scaleFactor;
-
-        originalCanvas.width = newWidth;
-        originalCanvas.height = newHeight;
-
-        // Display the original image
-        oCtx.drawImage(img, 0, 0, newWidth, newHeight);
-
-        // Automatically process the image after loading
+        // Process the image at full resolution
         processImage();
     };
 
     img.src = URL.createObjectURL(file);
 });
 
-// Keep automatic processing on palette changes
-colorInputs.forEach(input => {
-    input.addEventListener('input', function() {
+// Event listeners for palette changes
+[...colorInputs, ...checkboxes].forEach(element => {
+    element.addEventListener('input', function() {
         if (imgLoaded) {
             processImage();
         }
     });
 });
 
-checkboxes.forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-        if (imgLoaded) {
-            processImage();
-        }
-    });
+// Download button event listener
+downloadBtn.addEventListener('click', function() {
+    if (!processedImageDataURL) {
+        alert('Please process an image first.');
+        return;
+    }
+
+    const link = document.createElement('a');
+    link.href = processedImageDataURL;
+    link.download = 'transformed-image.png';
+
+    if (typeof link.download === 'undefined') {
+        window.open(link.href, '_blank');
+    } else {
+        link.click();
+    }
 });
 
 function processImage() {
-    // Get the selected colors based on the checkboxes
-    const selectedColors = [];
-    for (let i = 0; i < colorInputs.length; i++) {
-        if (checkboxes[i].checked) {
-            selectedColors.push(hexToRgb(colorInputs[i].value));
-        }
-    }
-    // If no colors are selected, alert the user and exit the function
+    const selectedColors = getSelectedColors();
+
     if (selectedColors.length === 0) {
         alert('Please select at least one color.');
         return;
     }
 
-    // Process and display the transformed image
-    const oCtx = originalCanvas.getContext('2d');
-    const pCtx = processedCanvas.getContext('2d');
+    // Create an off-screen canvas at full size
+    const fullSizeCanvas = document.createElement('canvas');
+    const fullSizeCtx = fullSizeCanvas.getContext('2d');
+    fullSizeCanvas.width = img.width;
+    fullSizeCanvas.height = img.height;
+    fullSizeCtx.drawImage(img, 0, 0);
 
-    // Match the processed canvas size to the original canvas
-    processedCanvas.width = originalCanvas.width;
-    processedCanvas.height = originalCanvas.height;
+    // Process the image
+    const imageData = fullSizeCtx.getImageData(0, 0, img.width, img.height);
+    processImageData(imageData.data, selectedColors);
+    fullSizeCtx.putImageData(imageData, 0, 0);
 
-    // Get image data
-    const imageData = oCtx.getImageData(0, 0, originalCanvas.width, originalCanvas.height);
-    const data = imageData.data;
+    // Store the full-size image data URL
+    processedImageDataURL = fullSizeCanvas.toDataURL('image/png');
 
-    // Process each pixel
-    for (let i = 0; i < data.length; i += 4) {
-        const pixelColor = {
-            r: data[i],
-            g: data[i + 1],
-            b: data[i + 2]
-        };
+    // Display the scaled-down image
+    displayProcessedImage(fullSizeCanvas);
+}
 
-        // Find the closest color in the palette
-        let closestColor = selectedColors[0];
-        let minDistance = colorDistance(pixelColor, selectedColors[0]);
-
-        for (let j = 1; j < selectedColors.length; j++) {
-            const dist = colorDistance(pixelColor, selectedColors[j]);
-            if (dist < minDistance) {
-                minDistance = dist;
-                closestColor = selectedColors[j];
-            }
+function getSelectedColors() {
+    const colors = [];
+    for (let i = 0; i < colorInputs.length; i++) {
+        if (checkboxes[i].checked) {
+            colors.push(hexToRgb(colorInputs[i].value));
         }
+    }
+    return colors;
+}
 
-        // Set the pixel to the closest palette color
+function processImageData(data, selectedColors) {
+    for (let i = 0; i < data.length; i += 4) {
+        const pixelColor = { r: data[i], g: data[i + 1], b: data[i + 2] };
+        const closestColor = findClosestColor(pixelColor, selectedColors);
         data[i] = closestColor.r;
         data[i + 1] = closestColor.g;
         data[i + 2] = closestColor.b;
-        // Alpha channel remains the same
     }
-
-    // Put the modified data back and draw it
-    pCtx.putImageData(imageData, 0, 0);
 }
 
-// Function to calculate the distance between two colors
+function findClosestColor(pixelColor, palette) {
+    let closestColor = palette[0];
+    let minDistance = colorDistance(pixelColor, palette[0]);
+
+    for (let i = 1; i < palette.length; i++) {
+        const dist = colorDistance(pixelColor, palette[i]);
+        if (dist < minDistance) {
+            minDistance = dist;
+            closestColor = palette[i];
+        }
+    }
+    return closestColor;
+}
+
+function displayProcessedImage(fullSizeCanvas) {
+    const pCtx = processedCanvas.getContext('2d');
+
+    const maxDisplayWidth = Math.min(window.innerWidth * 0.8, img.width);
+    const scaleFactor = maxDisplayWidth / img.width;
+    const displayWidth = img.width * scaleFactor;
+    const displayHeight = img.height * scaleFactor;
+
+    processedCanvas.width = displayWidth;
+    processedCanvas.height = displayHeight;
+
+    pCtx.drawImage(fullSizeCanvas, 0, 0, img.width, img.height, 0, 0, displayWidth, displayHeight);
+}
+
 function colorDistance(c1, c2) {
     return Math.sqrt(
         Math.pow(c1.r - c2.r, 2) +
@@ -134,7 +155,6 @@ function colorDistance(c1, c2) {
     );
 }
 
-// Function to convert hex code to RGB
 function hexToRgb(hex) {
     hex = hex.replace('#', '');
     if (hex.length === 3) {
